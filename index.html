@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    
+    <!-- Modern Font: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- jQuery (Required for Select2) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <!-- Select2 CSS & JS for Searchable Dropdown -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- QRious for QR Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    
+    <!-- HTML2Canvas for capturing the whole div as an image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <link rel="icon" href="favicon.png" type="image/x-icon">
+
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        /* Card Container */
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 30px 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        /* Form Layout */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: #333;
+            border: 1.5px solid #e1e5eb;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: #fcfcfc;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.15);
+            background-color: #ffffff;
+        }
+
+        /* Custom Styling for Select2 to match inputs */
+        .select2-container--default .select2-selection--single {
+            height: 48px;
+            border: 1.5px solid #e1e5eb;
+            border-radius: 8px;
+            background-color: #fcfcfc;
+            display: flex;
+            align-items: center;
+            padding-left: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 46px;
+            right: 10px;
+        }
+
+        .select2-container--default.select2-container--open .select2-selection--single,
+        .select2-container--default .select2-selection--single:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.15);
+            background-color: #ffffff;
+            outline: none;
+        }
+
+        .select2-dropdown {
+            border: 1.5px solid #4a90e2;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Buttons */
+        .btn-submit, #downloadButton {
+            width: 100%;
+            background-color: #4a90e2;
+            color: #fff;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover, #downloadButton:hover {
+            background-color: #357abd;
+        }
+
+        .btn-submit:active, #downloadButton:active {
+            transform: scale(0.98);
+        }
+
+        #downloadButton:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        /* Error Message */
+        .error {
+            color: #e74c3c;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            min-height: 20px;
+            font-weight: 500;
+        }
+
+        /* Capture Area (Wraps QR and Data) */
+        #captureArea {
+            background-color: #ffffff; /* Important for clean download */
+            padding: 15px 0;
+            border-radius: 12px;
+        }
+
+        /* QR Code Output */
+        .qr-code-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 12px;
+            border: 1px dashed #ccc;
+            min-height: 200px;
+        }
+
+        .qr-code-container img {
+            border-radius: 8px;
+        }
+
+        /* Data Display Below QR */
+        .data-display {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e1e5eb;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        .data-display p {
+            margin: 6px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .data-display p:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        .data-display strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        #downloadButton {
+            background-color: #2ecc71;
+            margin-top: 15px;
+        }
+
+        #downloadButton:hover:not(:disabled) {
+            background-color: #27ae60;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #4a90e2;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .footer a:hover {
+            color: #357abd;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Nepali Banks QR Code</h1>
+
+        <form id="qrCodeForm">
+            <div class="form-group">
+                <label for="fullName" class="form-label">Full Name</label>
+                <input type="text" id="fullName" name="fullName" class="form-input" placeholder="e.g. Ram Bahadur">
+            </div>
+
+            <div class="form-group">
+                <label for="accountNumber" class="form-label">Account Number</label>
+                <input type="text" id="accountNumber" name="accountNumber" class="form-input" placeholder="Enter Account Number">
+            </div>
+
+            <div class="form-group">
+                <label for="bankSelect" class="form-label">Search & Select Bank</label>
+                <select id="bankSelect" class="select-bank" style="width: 100%;">
+                    <option value="">-- Search for a Bank --</option>
+                    <option value="ACE DEVELOPMENT BANK LIMITED" data-swift="ACDENPKA">ACE DEVELOPMENT BANK LIMITED</option>
+                    <option value="AGRICULTURAL DEVELOPMENT BANK LTD" data-swift="ADBLNPKA">AGRICULTURAL DEVELOPMENT BANK LTD</option>
+                    <option value="BANK OF KATHMANDU LIMITED" data-swift="BOKLNPKA">BANK OF KATHMANDU LIMITED</option>
+                    <option value="CENTURY COMMERCIAL BANK LIMITED" data-swift="CCBNNPKA">CENTURY COMMERCIAL BANK LIMITED</option>
+                    <option value="CITIZENS BANK INTERNATIONAL LIMITED" data-swift="CTZNNPKA">CITIZENS BANK INTERNATIONAL LIMITED</option>
+                    <option value="CIVIL BANK LIMITED" data-swift="CIVLNPKA">CIVIL BANK LIMITED</option>
+                    <option value="EVEREST BANK LTD." data-swift="EVBLNPKA">EVEREST BANK LTD.</option>
+                    <option value="GLOBAL IME BANK LIMITED" data-swift="GLBBNPKA">GLOBAL IME BANK LIMITED</option>
+                    <option value="GRAND BANK NEPAL LIMITED" data-swift="DCBNNPKA">GRAND BANK NEPAL LIMITED</option>
+                    <option value="HIMALAYAN BANK LTD." data-swift="HIMANPKA">HIMALAYAN BANK LTD.</option>
+                    <option value="JANATA BANK NEPAL LIMITED" data-swift="JBNLNPKA">JANATA BANK NEPAL LIMITED</option>
+                    <option value="KASTHAMANDAP DEVELOPMENT BANK LTD" data-swift="KDBLNPKA">KASTHAMANDAP DEVELOPMENT BANK LTD</option>
+                    <option value="KIST BANK LIMITED" data-swift="KISTNPKA">KIST BANK LIMITED</option>
+                    <option value="KUMARI BANK LTD" data-swift="KMBLNPKA">KUMARI BANK LTD</option>
+                    <option value="LAXMI BANK LIMITED" data-swift="LXBLNPKA">LAXMI BANK LIMITED</option>
+                    <option value="LUMBINI BANK LIMITED" data-swift="LUBLNPKA">LUMBINI BANK LIMITED</option>
+                    <option value="MACHHAPUCHCHHRE BANK LIMITED" data-swift="MBLNNPKA">MACHHAPUCHCHHRE BANK LIMITED</option>
+                    <option value="Mahalaxmi bikash bank." data-swift="MBBLNPKA">Mahalaxmi Bikash Bank LTD.</option>
+                    <option value="MEGA BANK NEPAL LIMITED" data-swift="MBNLNPKA">MEGA BANK NEPAL LIMITED</option>
+                    <option value="NABIL BANK LIMITED" data-swift="NARBNPKA">NABIL BANK LIMITED</option>
+                    <option value="NEPAL BANGLADESH BANK LIMITED" data-swift="NPBBNPKA">NEPAL BANGLADESH BANK LIMITED</option>
+                    <option value="NEPAL BANK LIMITED" data-swift="NEBLNPKA">NEPAL BANK LIMITED</option>
+                    <option value="NEPAL CREDIT AND COMMERCE BANK LTD." data-swift="NBOCNPKA">NEPAL CREDIT AND COMMERCE BANK LTD.</option>
+                    <option value="NEPAL INVESTMENT BANK LTD." data-swift="NIBLNPKT">NEPAL INVESTMENT BANK LTD.</option>
+                    <option value="NEPAL RASTRA BANK" data-swift="NRBLNPKA">NEPAL RASTRA BANK</option>
+                    <option value="NEPAL SBI BANK LTD. KATHMANDU" data-swift="NSBINPKA">NEPAL SBI BANK LTD. KATHMANDU</option>
+                    <option value="NIC ASIA BANK LIMITED" data-swift="NICENPKA">NIC ASIA BANK LIMITED</option>
+                    <option value="NMB BANK LTD" data-swift="NMBBNPKA">NMB BANK LTD</option>
+                    <option value="PRIME COMMERCIAL BANK LTD" data-swift="PCBLNPKA">PRIME COMMERCIAL BANK LTD</option>
+                    <option value="RASTRIYA BANIJYA BANK" data-swift="RBBANPKA">RASTRIYA BANIJYA BANK</option>
+                    <option value="SANIMA BANK LIMITED" data-swift="SNMANPKA">SANIMA BANK LIMITED</option>
+                    <option value="SIDDHARTHA BANK LIMITED" data-swift="SIDDNPKA">SIDDHARTHA BANK LIMITED</option>
+                    <option value="STANDARD CHARTERED BANK NEPAL LIMITED" data-swift="SCBLNPKA">STANDARD CHARTERED BANK NEPAL LIMITED</option>
+                    <option value="SUNRISE BANK LIMITED" data-swift="SRBLNPKA">SUNRISE BANK LIMITED</option>
+                    <option value="TOURISM DEVELOPMENT BANK LTD." data-swift="TDBLNPKA">TOURISM DEVELOPMENT BANK LTD.</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-submit">Generate QR Code</button>
+            <p id="errorMessage" class="error"></p>
+        </form>
+
+        <!-- WRAPPER: This entire div gets downloaded as the image -->
+        <div id="captureArea" style="display: none;">
+            <div class="qr-code-container" id="qrContainerWrapper">
+                <div id="qrcode"></div>
+            </div>
+
+            <div id="qrDataDisplay" class="data-display">
+                <p><strong>Name:</strong> <span id="displayName"></span></p>
+                <p><strong>Account:</strong> <span id="displayAccount"></span></p>
+                <p><strong>Bank:</strong> <span id="displayBank"></span></p>
+            </div>
+        </div>
+
+        <button id="downloadButton" style="display: none;">Download Image</button>
+    </div>
+
+    <!-- Footer -->
+   <footer class="footer">
+        <p class="infos">&copy;
+            <script>document.write(new Date().getFullYear())</script>, 
+            Awadhesh Gupta
+        </p>
+    </footer>
+
+    <script>
+        $(document).ready(function () {
+            
+            // Initialize Select2 on the bank dropdown
+            $('#bankSelect').select2({
+                placeholder: "-- Search for a Bank --",
+                allowClear: true
+            });
+
+            const qrCodeForm = document.getElementById("qrCodeForm");
+            const qrCodeContainer = document.getElementById("qrcode");
+            const captureArea = document.getElementById("captureArea");
+            const errorMessage = document.getElementById("errorMessage");
+            const downloadButton = document.getElementById("downloadButton");
+            const accountNumberInput = document.getElementById("accountNumber");
+            
+            // Elements for displaying data
+            const displayName = document.getElementById("displayName");
+            const displayAccount = document.getElementById("displayAccount");
+            const displayBank = document.getElementById("displayBank");
+
+            qrCodeForm.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const fullName = document.getElementById("fullName").value.trim();
+                const accNumber = accountNumberInput.value.trim();
+                
+                // Fetch the selected option
+                const selectedOption = $('#bankSelect').find(':selected');
+                const bankName = selectedOption.val(); 
+                const swiftCode = selectedOption.attr("data-swift");
+
+                if (fullName && accNumber && swiftCode) {
+                    const data = {
+                        accountNumber: accNumber,
+                        accountName: fullName,
+                        bankName: bankName, 
+                        bankCode: swiftCode
+                    };
+
+                    const qr = new QRious({
+                        value: JSON.stringify(data),
+                        size: 220, 
+                        background: 'white', 
+                        foreground: '#333' 
+                    });
+
+                    qrCodeContainer.innerHTML = '';
+                    qrCodeContainer.appendChild(qr.image);
+                    errorMessage.textContent = '';
+                    
+                    // Populate the text below the QR code
+                    displayName.textContent = fullName;
+                    displayAccount.textContent = accNumber;
+                    displayBank.textContent = bankName;
+
+                    // Show the capture area (QR + Details) and the download button
+                    captureArea.style.display = 'block';
+                    downloadButton.style.display = 'block';
+                } else {
+                    errorMessage.textContent = 'Please fill out all fields, including selecting a bank.';
+                    
+                    // Hide everything if there is an error
+                    captureArea.style.display = 'none';
+                    downloadButton.style.display = 'none';
+                }
+            });
+
+            // Download Logic Using html2canvas
+            downloadButton.addEventListener("click", function () {
+                // Change button text briefly to show activity
+                const originalText = downloadButton.textContent;
+                downloadButton.textContent = "Generating...";
+                downloadButton.disabled = true;
+
+                // Capture the entire #captureArea div
+                html2canvas(captureArea, {
+                    scale: 2, // Higher quality resolution
+                    backgroundColor: "#ffffff" // Ensure background is white in the image
+                }).then(canvas => {
+                    const fullName = document.getElementById("fullName").value.trim();
+                    const safeName = fullName ? fullName.replace(/\s+/g, '_') : 'Bank';
+                    const fileName = `${safeName}_QRCode_Details.png`;
+                    
+                    // Convert canvas to image URL and trigger download
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL("image/png");
+                    link.download = fileName;
+                    link.click();
+
+                    // Restore button state
+                    downloadButton.textContent = originalText;
+                    downloadButton.disabled = false;
+                }).catch(err => {
+                    console.error("Error generating image: ", err);
+                    alert("Something went wrong while downloading. Please try again.");
+                    downloadButton.textContent = originalText;
+                    downloadButton.disabled = false;
+                });
+            });
+
+            accountNumberInput.addEventListener("input", function () {
+                this.value = this.value.toUpperCase();
+            });
+        });
+    </script>
+</body>
+
+</html>
